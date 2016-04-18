@@ -7,7 +7,13 @@ module Asha
 
     def hash_key(base, prefix=nil)
       key = Digest::SHA1.hexdigest(base)
-      prefix ? "#{prefix}:#{key}" : key
+      if prefix.nil? && self.respond_to?(:key_prefix)
+        "#{self.key_prefix}:#{key}"
+      elsif prefix
+        "#{prefix}:#{key}"
+      else
+        key
+      end
     end
 
   end
@@ -41,6 +47,12 @@ module Asha
 
         define_method("#{attr_name}=") do |value|
           instance_variable_set("@#{attr_name.to_s}", value)
+        end
+
+        if prefix = args[1]
+          define_method("key_prefix") do
+            prefix
+          end
         end
       end
       return @key

@@ -1,15 +1,29 @@
 require 'test_helper'
 
-class A
-  extend Asha::HelperMethods
-end
-
 describe Asha::HelperMethods do
 
-  it "should return hash_key" do
-    hash_key_using_class = A.hash_key("test", :source)
+  it "should test hash_key" do
+    @helper = Object.new
+    @helper.extend(Asha::HelperMethods)
+
     hash_key_computed = "source:#{Digest::SHA1.hexdigest 'test' }"
-    expect(hash_key_using_class).must_equal(hash_key_computed)
+    expect(@helper.hash_key("test", :source)).must_equal(hash_key_computed)
+  end
+
+  it "should test hash_key when custom class responds to a method call from module" do
+    class Document < Asha::Model;end
+    object = Document.new
+    object.extend(Asha::HelperMethods)
+
+    class << object
+      key(:url, :docx)
+    end
+
+    hash_key_computed = "docx:#{Digest::SHA1.hexdigest('test')}"
+    expect(object.hash_key("test", :source)).wont_equal(hash_key_computed)
+    expect(object.hash_key("test", :document)).wont_equal(hash_key_computed)
+    expect(object.hash_key("test", :docx)).must_equal(hash_key_computed)
+    expect(object.hash_key("test")).must_equal(hash_key_computed)
   end
 
 end
