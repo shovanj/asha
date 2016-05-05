@@ -66,6 +66,14 @@ module Asha
       return @key
     end
 
+    def attribute(*args)
+      @attributes = [] if @attributes.nil?
+      unless args.empty?
+        @attributes << args[0]
+      end
+      @attributes
+    end
+
   end
 
   class Model
