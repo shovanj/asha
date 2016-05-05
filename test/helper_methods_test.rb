@@ -4,7 +4,7 @@ describe Asha::HelperMethods do
 
   it "should test hash_key" do
     @helper = Object.new
-    @helper.extend(Asha::HelperMethods)
+    @helper.extend(Asha::HelperMethods::ClassMethods)
 
     hash_key_computed = "source:#{Digest::SHA1.hexdigest 'test' }"
     expect(@helper.hash_key("test", :source)).must_equal(hash_key_computed)
@@ -13,7 +13,7 @@ describe Asha::HelperMethods do
   it "should test hash_key when custom class responds to a method call from module" do
     class Document < Asha::Model;end
     object = Document.new
-    object.extend(Asha::HelperMethods)
+    object.extend(Asha::HelperMethods::ClassMethods)
 
     class << object
       key(:url, :docx)

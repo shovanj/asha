@@ -5,24 +5,32 @@ module Asha
 
   module HelperMethods
 
-    def hash_key(base, prefix=nil)
-      key = Digest::SHA1.hexdigest(base)
-      if prefix.nil? && self.respond_to?(:key_prefix)
-        "#{self.key_prefix}:#{key}"
-      elsif prefix
-        "#{prefix}:#{key}"
-      else
-        key
-      end
+    def self.included(base)
+      base.extend(ClassMethods)
     end
-
-  end
-
-  module InstanceMethods
 
     def klass_name
       self.class.name.downcase
     end
+
+    module ClassMethods
+
+      def hash_key(base, prefix=nil)
+        key = Digest::SHA1.hexdigest(base)
+        if prefix.nil? && self.respond_to?(:key_prefix)
+          "#{self.key_prefix}:#{key}"
+        elsif prefix
+          "#{prefix}:#{key}"
+        else
+          key
+        end
+      end
+
+    end
+  end
+
+  module InstanceMethods
+
 
     def set
       @set ||= klass_name
@@ -62,7 +70,7 @@ module Asha
 
   class Model
 
-    extend HelperMethods
+    include HelperMethods
     extend ClassMethods
 
     include InstanceMethods
