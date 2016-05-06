@@ -1,4 +1,4 @@
-require "asha/version"
+require_relative "asha/version"
 require 'digest'
 
 module Asha
