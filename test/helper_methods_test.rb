@@ -12,7 +12,7 @@ describe Asha::HelperMethods do
 
   it "should test hash_key when custom class responds to a method call from module" do
     class Document < Asha::Model;end
-    object = Document.new
+    object = Document.new({})
     object.extend(Asha::HelperMethods::ClassMethods)
 
     class << object

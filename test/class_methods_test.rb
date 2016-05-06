@@ -14,7 +14,7 @@ end
 describe Asha::ClassMethods do
 
   let(:object) do
-    Source.new
+    Source.new({title: "test"})
   end
 
   describe "#key" do

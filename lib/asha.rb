@@ -32,6 +32,13 @@ module Asha
 
   module InstanceMethods
 
+    def initialize(attrs)
+      attrs.each do |k,v|
+        if respond_to? "#{k}="
+          instance_variable_set("@#{k}", v)
+        end
+      end
+    end
 
     def set
       @set ||= klass_name
