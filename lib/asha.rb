@@ -66,12 +66,10 @@ module Asha
       return @key
     end
 
-    def attribute(*args)
+    def attribute(attribute_name)
       @attributes = [] if @attributes.nil?
-      unless args.empty?
-        @attributes << args[0]
-      end
-      @attributes
+      self.class_eval { attr_accessor attribute_name }
+      @attributes << attribute_name
     end
 
   end

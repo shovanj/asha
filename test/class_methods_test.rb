@@ -40,6 +40,13 @@ describe Asha::ClassMethods do
       expect(Source.instance_variable_get("@attributes").sort).must_equal(expected_result)
     end
 
+    it "should respond to defined attributes" do
+      expect(object).must_respond_to "title"
+      expect(object).must_respond_to "created_at"
+      expect(object).must_respond_to "created_at"
+      expect(object).wont_respond_to "age"
+    end
+
   end
 
 end
