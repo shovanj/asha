@@ -1,5 +1,6 @@
 require_relative "asha/version"
 require 'digest'
+require 'redis'
 
 module Asha
 
