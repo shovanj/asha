@@ -35,4 +35,10 @@ describe Asha::InstanceMethods do
     end
   end
 
+  describe "#save" do
+    it "should respond to #save" do
+      expect(object).must_respond_to "save"
+      object.save
+    end
+  end
 end

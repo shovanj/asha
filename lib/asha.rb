@@ -4,6 +4,14 @@ require 'redis'
 
 module Asha
 
+  def self.database
+    @redis ||= Redis.new(
+        :host => "127.0.0.1",
+        :port => 6379,
+        :db => 1 # TODO: Fix me ENV['DATABASE']
+    )
+  end
+
   module HelperMethods
 
     def self.included(base)
@@ -13,6 +21,7 @@ module Asha
     def klass_name
       self.class.name.downcase
     end
+
 
     module ClassMethods
 
@@ -28,6 +37,7 @@ module Asha
       end
 
     end
+
   end
 
   module InstanceMethods
@@ -48,7 +58,50 @@ module Asha
       @sorted_set ||= "z#{set}"
     end
 
-  end
+    def db
+      Asha.database
+    end
+
+    def identifier
+      @identifier ||= "#{klass_name}:#{id_for_object}"
+    end
+
+    def exists?
+      db.exists(identifier)
+    end
+
+    def new?
+      !exists?
+    end
+
+    def save
+      new_record = new?
+      instance_variables.each do |v|
+        db.hset(
+            identifier,
+            v.to_s.gsub('@',''),
+            instance_variable_get(v)
+        )
+      end
+      db.hset(identifier, 'created_at', Time.now) if new_record
+      db.hset(identifier, 'updated_at', Time.now)
+    end
+
+    private
+
+    def id_for_object
+      if defined?(self.id)
+        self.id
+      else
+        next_available_id
+      end
+    end
+
+    def next_available_id
+      return db.incr "#{klass_name}:id_counter"
+    end
+
+end
 
   module ClassMethods
 
@@ -78,6 +131,7 @@ module Asha
       @attributes = [] if @attributes.nil?
       self.class_eval { attr_accessor attribute_name }
       @attributes << attribute_name
+      @attributes.uniq!
     end
 
   end
