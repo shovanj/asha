@@ -4,8 +4,6 @@ class Source < Asha::Model
 
   attribute :title
   attribute :url
-  attribute :updated_at
-  attribute :created_at
 
   key :url
 
@@ -36,7 +34,7 @@ describe Asha::ClassMethods do
 
     # TODO: create custom matcher to compare array
     it "should set given attributes to instance variable" do
-      expected_result = [:title, :updated_at, :url, :created_at].sort
+      expected_result = [:title, :url].sort
       expect(Source.instance_variable_get("@attributes").sort).must_equal(expected_result)
     end
 

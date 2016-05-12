@@ -42,6 +42,9 @@ module Asha
 
   module InstanceMethods
 
+    attr_reader :created_at
+    attr_reader :updated_at
+
     def initialize(attrs)
       attrs.each do |k,v|
         if respond_to? "#{k}="
@@ -77,6 +80,7 @@ module Asha
     def save
       new_record = new?
       instance_variables.each do |v|
+        next if v == :@identifier
         db.hset(
             identifier,
             v.to_s.gsub('@',''),

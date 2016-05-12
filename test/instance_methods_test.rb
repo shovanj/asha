@@ -3,7 +3,6 @@ require 'test_helper'
 class Source < Asha::Model
 
   attribute :title
-  attribute :created_at
   attribute :url
 
   key :url
@@ -12,8 +11,12 @@ end
 
 describe Asha::InstanceMethods do
 
+  let(:params) do
+    {title: "The New Blog", url: "http://localhost/atom.xml"}
+  end
+
   let(:object) do
-    Source.new({title: "The New Blog", created_at: Time.now.to_s, url: "http://localhost/atom.xml"})
+    Source.new(params)
   end
 
   it "should return 'source' as set name" do
@@ -39,6 +42,23 @@ describe Asha::InstanceMethods do
     it "should respond to #save" do
       expect(object).must_respond_to "save"
       object.save
+    end
+
+    it "should call 'hset' on redis with correct params" do
+      identifier = object.identifier
+      db = Minitest::Mock.new
+      db.expect(:exists, false, [identifier])
+
+      params.each do |key, value|
+        db.expect(:hset, nil, [identifier, key.to_s, value])
+      end
+
+      db.expect(:hset, nil, [identifier, "created_at", Time])
+      db.expect(:hset, nil, [identifier, "updated_at", Time])
+
+      object.stub("db", db) do
+        object.save
+      end
     end
   end
 end
