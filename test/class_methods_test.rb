@@ -7,6 +7,10 @@ class Source < Asha::Model
 
   key :url
 
+  set :posts, {sorted: true}
+
+  set :authors
+
 end
 
 describe Asha::ClassMethods do
@@ -23,11 +27,9 @@ describe Asha::ClassMethods do
     it "should return correct value for 'key'" do
       expect(Source.key).must_equal :url
     end
-
   end
 
   describe "#attribute" do
-
     it "should respond to 'attribute'" do
       expect(Source).must_respond_to "attribute"
     end
@@ -44,8 +46,12 @@ describe Asha::ClassMethods do
       expect(object).must_respond_to "created_at"
       expect(object).wont_respond_to "age"
     end
-
   end
 
+  describe ".set" do
+    it "should do something" do
+      expect(Source.instance_variable_get('@sets').sort).must_equal([:posts, :authors].sort)
+    end
+  end
 end
 

@@ -109,6 +109,7 @@ end
 
   module ClassMethods
 
+
     def key(*args)
       unless args.empty?
         attr_name = args[0]
@@ -136,6 +137,25 @@ end
       self.class_eval { attr_accessor attribute_name }
       @attributes << attribute_name
       @attributes.uniq!
+    end
+
+    def set(set_name, options = nil)
+      @sets = [] if @sets.nil?
+      @sets << set_name
+
+      self.class_eval do
+        if options && options[:sorted] == true
+          define_method set_name do
+            db.zrevrange("z#{identifier}:#{set_name}", 0, -1)
+          end
+        else
+          define_method set_name do
+            db.smembers("#{identifier}:#{set_name}")
+          end
+        end
+      end
+
+      @sets.uniq!
     end
 
   end

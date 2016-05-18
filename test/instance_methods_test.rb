@@ -7,6 +7,10 @@ class Source < Asha::Model
 
   key :url
 
+  set :posts, {sorted: true}
+
+  set :authors
+
 end
 
 describe Asha::InstanceMethods do
@@ -41,7 +45,6 @@ describe Asha::InstanceMethods do
   describe "#save" do
     it "should respond to #save" do
       expect(object).must_respond_to "save"
-      object.save
     end
 
     it "should call 'hset' on redis with correct params" do
@@ -61,4 +64,31 @@ describe Asha::InstanceMethods do
       end
     end
   end
+
+  describe "set related methods" do
+
+    describe "sorted/unsorted set" do
+      it "should call 'zrevrange' on redis with correct params" do
+        identifier = object.identifier
+        mocked_db = Minitest::Mock.new
+        mocked_db.expect('zrevrange', nil, ["z#{identifier}:posts", 0, -1])
+
+        object.stub('db', mocked_db) do
+          object.posts
+        end
+      end
+
+      it "should call 'smembers' with correct params" do
+        identifier = object.identifier
+        mocked_db = Minitest::Mock.new
+        mocked_db.expect('smembers', nil, ["#{identifier}:authors"])
+
+        object.stub('db', mocked_db) do
+          object.authors
+        end
+      end
+    end
+
+  end
+
 end
