@@ -48,7 +48,7 @@ describe Asha::InstanceMethods do
     end
 
     it "should call 'hset' on redis with correct params" do
-      object.stub("id_for_object", 1) do
+      object.stub("next_available_id", 1) do
         identifier = object.identifier
 
         db = Minitest::Mock.new
@@ -65,7 +65,6 @@ describe Asha::InstanceMethods do
         object.stub("db", db) do
           object.save
         end
-
       end
     end
   end

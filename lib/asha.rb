@@ -67,7 +67,7 @@ module Asha
     end
 
     def identifier
-      @identifier ||= "#{klass_name}:#{id_for_object}"
+      @identifier ||= "#{klass_name}:#{id}"
     end
 
     def exists?
@@ -96,11 +96,11 @@ module Asha
       db.hset(identifier, 'updated_at', Time.now)
     end
 
-    private
-
-    def id_for_object
-      @id ||= next_available_id
+    def id
+      @id ||= (instance_variable_get(:@id) || next_available_id)
     end
+
+    private
 
     def next_available_id
       return db.incr "#{klass_name}:id_counter"
