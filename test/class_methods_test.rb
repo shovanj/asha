@@ -53,5 +53,24 @@ describe Asha::ClassMethods do
       expect(Source.instance_variable_get('@sets').sort).must_equal([:posts, :authors].sort)
     end
   end
+
+  describe ".find" do
+
+    let(:object) do
+      Source.new({title: "News"})
+    end
+
+    it "should respond to find" do
+      expect(Source).must_respond_to "find"
+    end
+
+    it "should return an object" do
+      object.save
+      source = Source.find(object.id)
+      expect(source).must_be_kind_of Hash
+      expect(source["title"]).must_equal "News"
+    end
+
+  end
 end
 

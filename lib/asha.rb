@@ -110,6 +110,9 @@ module Asha
 
   module ClassMethods
 
+    def db
+      Asha.database
+    end
 
     def key(*args)
       unless args.empty?
@@ -160,7 +163,7 @@ module Asha
     end
 
     def find(id)
-      # db.getall("#{self.name.downcase}:#{id}")
+      db.hgetall("#{self.name.downcase}:#{id}")
     end
   end
 
