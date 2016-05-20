@@ -44,6 +44,7 @@ module Asha
 
     attr_reader :created_at
     attr_reader :updated_at
+    attr_reader :id
 
     def initialize(attrs)
       attrs.each do |k,v|
@@ -81,31 +82,31 @@ module Asha
       new_record = new?
       instance_variables.each do |v|
         next if v == :@identifier
+        next if v == :@id
         db.hset(
             identifier,
             v.to_s.gsub('@',''),
             instance_variable_get(v)
         )
       end
-      db.hset(identifier, 'created_at', Time.now) if new_record
+      if new_record
+        db.hset(identifier, "id", @id)
+        db.hset(identifier, 'created_at', Time.now)
+      end
       db.hset(identifier, 'updated_at', Time.now)
     end
 
     private
 
     def id_for_object
-      if defined?(self.id)
-        self.id
-      else
-        next_available_id
-      end
+      @id ||= next_available_id
     end
 
     def next_available_id
       return db.incr "#{klass_name}:id_counter"
     end
 
-end
+  end
 
   module ClassMethods
 
@@ -158,6 +159,9 @@ end
       @sets.uniq!
     end
 
+    def find(id)
+      # db.getall("#{self.name.downcase}:#{id}")
+    end
   end
 
   class Model

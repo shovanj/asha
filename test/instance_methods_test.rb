@@ -48,19 +48,24 @@ describe Asha::InstanceMethods do
     end
 
     it "should call 'hset' on redis with correct params" do
-      identifier = object.identifier
-      db = Minitest::Mock.new
-      db.expect(:exists, false, [identifier])
+      object.stub("id_for_object", 1) do
+        identifier = object.identifier
 
-      params.each do |key, value|
-        db.expect(:hset, nil, [identifier, key.to_s, value])
-      end
+        db = Minitest::Mock.new
+        db.expect(:exists, false, [identifier])
 
-      db.expect(:hset, nil, [identifier, "created_at", Time])
-      db.expect(:hset, nil, [identifier, "updated_at", Time])
+        params.each do |key, value|
+          db.expect(:hset, nil, [identifier, key.to_s, value])
+        end
 
-      object.stub("db", db) do
-        object.save
+        db.expect(:hset, nil, [identifier, "id", object.id])
+        db.expect(:hset, nil, [identifier, "created_at", Time])
+        db.expect(:hset, nil, [identifier, "updated_at", Time])
+
+        object.stub("db", db) do
+          object.save
+        end
+
       end
     end
   end
