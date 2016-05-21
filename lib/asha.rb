@@ -163,7 +163,7 @@ module Asha
     end
 
     def find(id)
-      db.hgetall("#{self.name.downcase}:#{id}")
+      self.new(db.hgetall("#{self.name.downcase}:#{id}"))
     end
   end
 

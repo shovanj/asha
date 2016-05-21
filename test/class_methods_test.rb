@@ -67,8 +67,8 @@ describe Asha::ClassMethods do
     it "should return an object" do
       object.save
       source = Source.find(object.id)
-      expect(source).must_be_kind_of Hash
-      expect(source["title"]).must_equal "News"
+      expect(source).must_be_kind_of Source
+      expect(source.title).must_equal "News"
     end
 
   end
