@@ -7,7 +7,7 @@ class Source < Asha::Model
 
   key :url
 
-  set :posts, {sorted: true}
+  set :posts
 
   set :authors
 

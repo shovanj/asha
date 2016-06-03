@@ -22,6 +22,9 @@ module Asha
       self.class.name.downcase
     end
 
+    def db
+      Asha.database
+    end
 
     module ClassMethods
 
@@ -62,9 +65,6 @@ module Asha
       @sorted_set ||= "z#{set}"
     end
 
-    def db
-      Asha.database
-    end
 
     def identifier
       @identifier ||= "#{klass_name}:#{id}"
@@ -94,6 +94,7 @@ module Asha
         db.hset(identifier, 'created_at', Time.now)
       end
       db.hset(identifier, 'updated_at', Time.now)
+      self
     end
 
     def id
@@ -143,19 +144,22 @@ module Asha
       @attributes.uniq!
     end
 
-    def set(set_name, options = nil)
+    def set(set_name)
       @sets = [] if @sets.nil?
       @sets << set_name
 
       self.class_eval do
-        if options && options[:sorted] == true
-          define_method set_name do
-            db.zrevrange("z#{identifier}:#{set_name}", 0, -1)
+        define_method set_name do
+          unless instance_variable_defined?("@#{set_name}")
+            set = instance_variable_set("@#{set_name}", Set.new)
+            yield(set) if block_given?
+            if set.sorted
+              set.id = "z#{identifier}:#{set_name}"
+            else
+              set.id = "#{identifier}:#{set_name}"
+            end
           end
-        else
-          define_method set_name do
-            db.smembers("#{identifier}:#{set_name}")
-          end
+          instance_variable_get("@#{set_name}")
         end
       end
 
@@ -173,6 +177,36 @@ module Asha
     extend ClassMethods
 
     include InstanceMethods
+
+  end
+
+  class Set
+
+    attr_accessor :id
+    attr_accessor :sorted
+
+    include Enumerable
+    include HelperMethods
+
+    def initialize()
+      @members = []
+    end
+
+    def each(&block)
+      @members.each do |member|
+        block.call(member)
+      end
+    end
+
+    def add(model)
+      result = if sorted
+                 db.zadd("#{id}", Time.now.to_i, model.id)
+               else
+                 db.sadd(id, model.id)
+               end
+      @members << model unless result
+    end
+    alias_method :<<, :add
 
   end
 
