@@ -204,7 +204,7 @@ module Asha
                else
                  db.sadd(id, model.id)
                end
-      @members << model unless result
+      @members << model if result
     end
     alias_method :<<, :add
 

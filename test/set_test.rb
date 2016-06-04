@@ -33,7 +33,7 @@ describe Asha::Set do
   end
 
   let(:sword) do
-    Sword.new(params)
+    Sword.new(params).save
   end
 
   it "should respond to ':all?'" do
@@ -54,25 +54,57 @@ describe Asha::Set do
       sword.abilities << ability1
       sword.abilities << ability2
     end
-
   end
 
+  it "should add objects as members only when redis returns succes" do
+    ability1 = Ability.new(name: "Dragon Slayer").save
+    ability2 = Ability.new(name: "White walker killer").save
+
+    db = Minitest::Mock.new
+    db.expect(:sadd, false, [sword.abilities.id, ability1.id])
+    db.expect(:sadd, true, [sword.abilities.id, ability2.id])
+
+    sword.abilities.stub("db", db) do
+      sword.abilities << ability1
+      sword.abilities << ability2
+    end
+
+    assert_includes(sword.abilities, ability2)
+    refute_includes(sword.abilities, ability1)
+  end
 
   it "should handle 'sorted' sets" do
-    sword.save
 
     owner1 = Owner.new(name: "Eddard Stark").save
     owner2 = Owner.new(name: "Jon Snow").save
 
     db = Minitest::Mock.new
     db.expect(:zadd, true, [sword.owners.id, Fixnum, owner1.id])
-    db.expect(:zadd, true, [sword.owners.id, Fixnum, owner2.id])
+    db.expect(:zadd, false, [sword.owners.id, Fixnum, owner2.id])
 
     sword.owners.stub("db", db) do
       sword.owners << owner1
       sword.owners << owner2
     end
 
-  end
+ end
+
+  it "should add objects as members only when redis returns succes" do
+
+    owner1 = Owner.new(name: "Eddard Stark").save
+    owner2 = Owner.new(name: "Jon Snow").save
+
+    db = Minitest::Mock.new
+    db.expect(:zadd, true, [sword.owners.id, Fixnum, owner1.id])
+    db.expect(:zadd, false, [sword.owners.id, Fixnum, owner2.id])
+
+    sword.owners.stub("db", db) do
+      sword.owners << owner1
+      sword.owners << owner2
+    end
+
+    assert_includes(sword.owners, owner1)
+    refute_includes(sword.owners, owner2)
+ end
 
 end
