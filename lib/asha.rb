@@ -4,12 +4,18 @@ require 'redis'
 
 module Asha
 
-  def self.database
+  def self.establish_connection(conn)
+    raise "Please specify database." unless conn[:db]
     @redis ||= Redis.new(
-        :host => "127.0.0.1",
-        :port => 6379,
-        :db => 1 # TODO: Fix me ENV['DATABASE']
+                        host: conn[:host],
+                        port: conn[:port] || 6379,
+                        db: conn[:db]
     )
+  end
+
+  def self.database
+    raise 'Please establish connection to redis.' unless @redis
+    @redis
   end
 
   module HelperMethods

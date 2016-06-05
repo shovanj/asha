@@ -5,3 +5,5 @@ require 'minitest/autorun'
 require 'minitest/reporters'
 
 MiniTest::Reporters.use!
+
+Asha.establish_connection(host: '127.0.0.1', db: 1)
