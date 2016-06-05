@@ -61,7 +61,8 @@ describe Asha::InstanceMethods do
         db.expect(:hset, nil, [identifier, "id", object.id])
         db.expect(:hset, nil, [identifier, "created_at", Time])
         db.expect(:hset, nil, [identifier, "updated_at", Time])
-
+        db.expect(:zadd, nil, ["zsource", Fixnum, object.id])
+        db.expect(:sadd, nil, ["source", Base64.strict_encode64(params[:url])])
         object.stub("db", db) do
           object.save
         end

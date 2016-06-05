@@ -1,6 +1,7 @@
 require_relative "asha/version"
 require 'digest'
 require 'redis'
+require 'base64'
 
 module Asha
 
@@ -100,6 +101,14 @@ module Asha
         db.hset(identifier, 'created_at', Time.now)
       end
       db.hset(identifier, 'updated_at', Time.now)
+
+      set_member_id = if self.class.key
+                        Base64.strict_encode64(instance_variable_get("@#{self.class.key}"))
+                      else
+                        @id
+                      end
+      db.zadd("z#{klass_name}", Time.now.to_i, @id)
+      db.sadd(klass_name, set_member_id)
       self
     end
 

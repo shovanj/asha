@@ -15,8 +15,12 @@ end
 
 describe Asha::ClassMethods do
 
+  let(:params) do
+    {title: "The New Blog", url: "http://localhost/atom.xml"}
+  end
+
   let(:object) do
-    Source.new({title: "test"})
+    Source.new(params)
   end
 
   describe "#key" do
@@ -26,6 +30,25 @@ describe Asha::ClassMethods do
 
     it "should return correct value for 'key'" do
       expect(Source.key).must_equal :url
+    end
+
+    it "should add key attribute to set named after the class" do
+      identifier = object.identifier
+      db = Minitest::Mock.new
+      db.expect(:exists, false, [identifier])
+      params.each do |key, value|
+        db.expect(:hset, nil, [identifier, key.to_s, value])
+      end
+
+      db.expect(:hset, nil, [identifier, "id", object.id])
+      db.expect(:hset, nil, [identifier, "created_at", Time])
+      db.expect(:hset, nil, [identifier, "updated_at", Time])
+      db.expect(:zadd, nil, ["zsource", Fixnum, object.id])
+      db.expect(:sadd, nil, ["source", String])
+
+      object.stub("db", db) do
+        object.save
+      end
     end
   end
 
@@ -57,7 +80,7 @@ describe Asha::ClassMethods do
   describe ".find" do
 
     let(:object) do
-      Source.new({title: "News"})
+      Source.new({title: "News", url: "http://localhost"})
     end
 
     it "should respond to find" do
