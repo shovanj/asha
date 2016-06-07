@@ -112,6 +112,16 @@ module Asha
       self
     end
 
+    def update(values)
+      raise "Please save the record first." if new?
+      values.each do |key, value|
+        if self.class.attributes.include?(key)
+          db.hset(identifier, key.to_s, value)
+        end
+      end
+      db.hset(identifier, 'updated_at', Time.now)
+    end
+
     def id
       @id ||= (instance_variable_get(:@id) || next_available_id)
     end
@@ -125,6 +135,8 @@ module Asha
   end
 
   module ClassMethods
+
+    attr_accessor :attributes
 
     def db
       Asha.database

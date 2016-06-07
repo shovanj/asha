@@ -70,6 +70,35 @@ describe Asha::InstanceMethods do
     end
   end
 
+  describe "#update" do
+    it "should respond to #save" do
+      expect(object).must_respond_to "update"
+    end
+
+    it "should update redis hash with correct values" do
+      object.save
+
+      identifier = object.identifier
+      new_attrs = {title: "Awesome new title", url: "http://localhost/rss"}
+      db = Minitest::Mock.new
+      db.expect(:exists, true, [identifier])
+
+      new_attrs.each do |key, value|
+        db.expect(:hset, nil, [identifier, key.to_s, value])
+      end
+
+      db.expect(:hset, nil, [identifier, "updated_at", Time])
+      object.stub("db", db) do
+        object.update(new_attrs)
+      end
+
+    end
+
+    it "should raise an error if update is called on unsaved record" do
+      -> { object.update({}) }.must_raise RuntimeError
+    end
+  end
+
   describe "set related methods" do
 
     describe "sorted/unsorted set" do
