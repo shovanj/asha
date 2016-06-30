@@ -263,8 +263,11 @@ module Asha
       end
     end
 
+
+    # TODO: how to handle when model is not in db yet
     def add(model)
       raise "Invalid data" unless model.is_a? Asha::Model
+      raise "Object not persisted" unless model.persisted
       result = if sorted
                  db.zadd("#{id}", Time.now.to_i, model.id)
                else
@@ -275,5 +278,6 @@ module Asha
     alias_method :<<, :add
 
   end
+
 
 end
