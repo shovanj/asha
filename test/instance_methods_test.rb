@@ -53,7 +53,7 @@ describe Asha::InstanceMethods do
 
         db = Minitest::Mock.new
         db.expect(:sismember, true, [String, String])
-        db.expect(:sismember, true, [String, String])
+        db.expect(:sismember, false, [String, String])
         db.expect(:exists, false, [identifier])
 
         params.each do |key, value|
@@ -82,7 +82,7 @@ describe Asha::InstanceMethods do
 
     it "should update redis hash with correct values" do
       object.save
-      p object
+
       identifier = object.identifier
       new_attrs = {title: "Awesome new title", url: "http://localhost/rss"}
       db = Minitest::Mock.new
@@ -132,6 +132,9 @@ describe Asha::InstanceMethods do
   end
 
   def teardown
+    Asha.database.smembers("source").each do |v|
+      Asha.database.srem("source", v) # TODO: find a better way
+    end
     Asha.database.hgetall(object.identifier).each do |k,v|
       Asha.database.hdel(object.identifier, k)
     end

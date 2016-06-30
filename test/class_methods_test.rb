@@ -40,7 +40,7 @@ describe Asha::ClassMethods do
       identifier = object.identifier
       db = Minitest::Mock.new
       db.expect(:sismember, true, [String, String])
-      db.expect(:sismember, true, [String, String])
+      db.expect(:sismember, false, [String, String])
       db.expect(:exists, false, [identifier])
       params.each do |key, value|
         db.expect(:hset, nil, [identifier, key.to_s, value])
@@ -101,6 +101,12 @@ describe Asha::ClassMethods do
       expect(source.title).must_equal "News"
     end
 
+  end
+
+  def teardown
+    Asha.database.hgetall(object.identifier).each do |k,v|
+      Asha.database.hdel(object.identifier, k)
+    end
   end
 end
 
