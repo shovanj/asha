@@ -16,11 +16,15 @@ end
 describe Asha::ClassMethods do
 
   let(:params) do
-    {title: "The New Blog", url: "http://localhost/atom.xml"}
+    {title: "The New Blog", url: "http://localhost/atom2.xml"}
   end
 
   let(:object) do
     Source.new(params)
+  end
+
+  def setup
+    Asha.database.srem("source", object.set_member_id) # TODO: find a better way
   end
 
   describe "#key" do
@@ -35,6 +39,8 @@ describe Asha::ClassMethods do
     it "should add key attribute to set named after the class" do
       identifier = object.identifier
       db = Minitest::Mock.new
+      db.expect(:sismember, true, [String, String])
+      db.expect(:sismember, true, [String, String])
       db.expect(:exists, false, [identifier])
       params.each do |key, value|
         db.expect(:hset, nil, [identifier, key.to_s, value])
@@ -69,7 +75,8 @@ describe Asha::ClassMethods do
       expect(object).must_respond_to "created_at"
       expect(object).wont_respond_to "age"
     end
-  end
+
+ end
 
   describe ".set" do
     it "should do something" do

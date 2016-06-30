@@ -55,6 +55,7 @@ module Asha
     attr_reader :created_at
     attr_reader :updated_at
     attr_reader :id
+    attr_reader :persisted
 
     def initialize(attrs)
       attrs.each do |k,v|
@@ -62,6 +63,7 @@ module Asha
           instance_variable_set("@#{k}", v)
         end
       end
+      @persisted = false
     end
 
     def set
@@ -87,6 +89,49 @@ module Asha
 
     def save
       new_record = new?
+      if new_record && !db.sismember(klass_name, set_member_id)
+        persist_in_db(true)
+        add_to_sets
+      elsif new_record && db.sismember(klass_name, set_member_id)
+        # error has occured
+        p "An error has occured"
+      elsif !new_record
+        persist_in_db
+      end
+      self
+    end
+
+    def update(values)
+      raise "Please save the record first." unless @persisted
+      values.each do |key, value|
+        if self.class.attributes.include?(key)
+          instance_variable_set("@#{key}", value)
+          db.hset(identifier, key.to_s, value)
+        end
+      end
+      db.hset(identifier, 'updated_at', Time.now)
+      self
+    end
+
+    def id
+      @id ||= (instance_variable_get(:@id) || next_available_id)
+    end
+
+    def set_member_id
+      if self.class.key
+        Base64.strict_encode64(instance_variable_get("@#{self.class.key}"))
+      else
+        @id
+      end
+    end
+
+    private
+
+    def next_available_id
+      return db.incr "#{klass_name}:id_counter"
+    end
+
+    def persist_in_db(new_record=false)
       instance_variables.each do |v|
         next if v == :@identifier
         next if v == :@id
@@ -101,35 +146,12 @@ module Asha
         db.hset(identifier, 'created_at', Time.now)
       end
       db.hset(identifier, 'updated_at', Time.now)
+      @persisted = true
+    end
 
-      set_member_id = if self.class.key
-                        Base64.strict_encode64(instance_variable_get("@#{self.class.key}"))
-                      else
-                        @id
-                      end
+    def add_to_sets
       db.zadd("z#{klass_name}", Time.now.to_i, @id)
       db.sadd(klass_name, set_member_id)
-      self
-    end
-
-    def update(values)
-      raise "Please save the record first." if new?
-      values.each do |key, value|
-        if self.class.attributes.include?(key)
-          db.hset(identifier, key.to_s, value)
-        end
-      end
-      db.hset(identifier, 'updated_at', Time.now)
-    end
-
-    def id
-      @id ||= (instance_variable_get(:@id) || next_available_id)
-    end
-
-    private
-
-    def next_available_id
-      return db.incr "#{klass_name}:id_counter"
     end
 
   end
@@ -140,6 +162,10 @@ module Asha
 
     def db
       Asha.database
+    end
+
+    def create(attrs)
+      self.new(attrs)
     end
 
     def key(*args)
@@ -194,7 +220,19 @@ module Asha
     end
 
     def find(id)
-      self.new(db.hgetall("#{self.name.downcase}:#{id}"))
+      hash = db.hgetall("#{self.name.downcase}:#{id}")
+      if !hash.empty?
+       record = self.new(hash)
+       record.instance_variable_set(:@persisted, true)
+       record.instance_variable_set(:@id, id)
+       record
+      end
+    end
+
+    def all
+      db.zrevrange("z#{self.name.downcase}", 0, -1).inject([]) do |result, r|
+        result << self.find(r)
+      end
     end
   end
 
@@ -226,6 +264,7 @@ module Asha
     end
 
     def add(model)
+      raise "Invalid data" unless model.is_a? Asha::Model
       result = if sorted
                  db.zadd("#{id}", Time.now.to_i, model.id)
                else

@@ -52,6 +52,8 @@ describe Asha::InstanceMethods do
         identifier = object.identifier
 
         db = Minitest::Mock.new
+        db.expect(:sismember, true, [String, String])
+        db.expect(:sismember, true, [String, String])
         db.expect(:exists, false, [identifier])
 
         params.each do |key, value|
@@ -68,16 +70,19 @@ describe Asha::InstanceMethods do
         end
       end
     end
+
+
   end
 
   describe "#update" do
+
     it "should respond to #save" do
       expect(object).must_respond_to "update"
     end
 
     it "should update redis hash with correct values" do
       object.save
-
+      p object
       identifier = object.identifier
       new_attrs = {title: "Awesome new title", url: "http://localhost/rss"}
       db = Minitest::Mock.new
@@ -97,6 +102,7 @@ describe Asha::InstanceMethods do
     it "should raise an error if update is called on unsaved record" do
       -> { object.update({}) }.must_raise RuntimeError
     end
+
   end
 
   describe "set related methods" do
@@ -123,6 +129,12 @@ describe Asha::InstanceMethods do
       end
     end
 
+  end
+
+  def teardown
+    Asha.database.hgetall(object.identifier).each do |k,v|
+      Asha.database.hdel(object.identifier, k)
+    end
   end
 
 end
