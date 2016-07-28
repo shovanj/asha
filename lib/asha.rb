@@ -93,9 +93,9 @@ module Asha
         persist_in_db(true)
         add_to_sets
       elsif new_record && db.sismember(klass_name, set_member_id)
-        # error has occured
         p "An error has occured"
       elsif !new_record
+        # TODO: I don't like the method name here
         persist_in_db
       end
       self
@@ -103,13 +103,13 @@ module Asha
 
     def update(values)
       raise "Please save the record first." unless @persisted
+      # TODO: sanitize values param
       values.each do |key, value|
         if self.class.attributes.include?(key)
           instance_variable_set("@#{key}", value)
-          db.hset(identifier, key.to_s, value)
         end
       end
-      db.hset(identifier, 'updated_at', Time.now)
+      persist_in_db
       self
     end
 
@@ -135,6 +135,7 @@ module Asha
       instance_variables.each do |v|
         next if v == :@identifier
         next if v == :@id
+        next if v == :@persisted
         db.hset(
             identifier,
             v.to_s.gsub('@',''),

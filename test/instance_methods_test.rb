@@ -92,13 +92,16 @@ describe Asha::InstanceMethods do
         db.expect(:hset, nil, [identifier, key.to_s, value])
       end
 
+
       db.expect(:hset, nil, [identifier, "updated_at", Time])
+
       object.stub("db", db) do
         object.update(new_attrs)
       end
 
     end
 
+    # TODO: create a specific error, not just runtime
     it "should raise an error if update is called on unsaved record" do
       -> { object.update({}) }.must_raise RuntimeError
     end
