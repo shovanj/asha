@@ -5,6 +5,12 @@ require 'base64'
 
 module Asha
 
+  class DuplicateRecordError < RuntimeError
+    def initialize(record, msg="Record with given data already exists.")
+      super("#{msg} #{record.inspect}")
+    end
+  end
+
   def self.establish_connection(conn)
     raise "Please specify database." unless conn[:db]
     @redis ||= Redis.new(
@@ -55,17 +61,23 @@ module Asha
     attr_reader :created_at
     attr_reader :updated_at
     attr_reader :id
-    attr_reader :persisted
 
-    def initialize(attrs)
-      attrs.each do |k,v|
-        if respond_to? "#{k}="
-          instance_variable_set("@#{k}", v)
-        end
+    # @return [Boolean] indicates whether object has been stored in database
+    # attr_reader :persisted
+
+
+    def initialize(attrs=nil)
+      self.class.attributes.each do |attr|
+        val = if attrs && attrs.include?(attr)
+                attrs[attr]
+              end
+        instance_variable_set("@#{attr}", val)
       end
-      @persisted = false
     end
 
+    def persisted
+      !id.nil?
+    end
     def set
       @set ||= klass_name
     end
@@ -74,12 +86,12 @@ module Asha
       @sorted_set ||= "z#{set}"
     end
 
-
     def identifier
-      @identifier ||= "#{klass_name}:#{id}"
+      "#{klass_name}:#{id}"
     end
 
     def exists?
+      return false if id.nil?
       db.exists(identifier)
     end
 
@@ -93,7 +105,7 @@ module Asha
         persist_in_db(true)
         add_to_sets
       elsif new_record && db.sismember(klass_name, set_member_id)
-        p "An error has occured"
+        raise Asha::DuplicateRecordError.new(self)
       elsif !new_record
         # TODO: I don't like the method name here
         persist_in_db
@@ -102,7 +114,7 @@ module Asha
     end
 
     def update(values)
-      raise "Please save the record first." unless @persisted
+      raise "Please save the record first." unless persisted
       # TODO: sanitize values param
       values.each do |key, value|
         if self.class.attributes.include?(key)
@@ -113,15 +125,11 @@ module Asha
       self
     end
 
-    def id
-      @id ||= (instance_variable_get(:@id) || next_available_id)
-    end
-
     def set_member_id
       if self.class.key
         Base64.strict_encode64(instance_variable_get("@#{self.class.key}"))
       else
-        @id
+        id
       end
     end
 
@@ -132,10 +140,11 @@ module Asha
     end
 
     def persist_in_db(new_record=false)
+      @id = next_available_id if new_record
+
       instance_variables.each do |v|
         next if v == :@identifier
         next if v == :@id
-        next if v == :@persisted
         db.hset(
             identifier,
             v.to_s.gsub('@',''),
@@ -147,7 +156,6 @@ module Asha
         db.hset(identifier, 'created_at', Time.now)
       end
       db.hset(identifier, 'updated_at', Time.now)
-      @persisted = true
     end
 
     def add_to_sets
@@ -159,27 +167,30 @@ module Asha
 
   module ClassMethods
 
-    attr_accessor :attributes
-
     def db
       Asha.database
     end
 
     def create(attrs)
-      self.new(attrs)
+      self.new(attrs).save
     end
 
     def key(*args)
+      @key ||= nil
       unless args.empty?
         attr_name = args[0]
         @key ||= attr_name
 
-        define_method(attr_name) do
-          instance_variable_get("@#{attr_name.to_s}")
+        unless defined?(attr_name)
+          define_method(attr_name) do
+            instance_variable_get("@#{attr_name.to_s}")
+          end
         end
 
-        define_method("#{attr_name}=") do |value|
-          instance_variable_set("@#{attr_name.to_s}", value)
+        unless defined?("#{attr_name}=")
+          define_method("#{attr_name}=") do |value|
+            instance_variable_set("@#{attr_name.to_s}", value)
+          end
         end
 
         if prefix = args[1]
@@ -188,32 +199,40 @@ module Asha
           end
         end
       end
-      return @key
+      @key
     end
 
     def attribute(attribute_name)
-      @attributes = [] if @attributes.nil?
-      self.class_eval { attr_accessor attribute_name }
-      @attributes << attribute_name
+      @attributes ||= []
+      unless instance_methods.include?(attribute_name)
+        self.class_eval { attr_accessor attribute_name }
+        @attributes << attribute_name
+      end
       @attributes.uniq!
     end
 
+    def attributes
+      @attributes ||= []
+    end
+
     def set(set_name)
-      @sets = [] if @sets.nil?
+      @sets ||= []
       @sets << set_name
 
       self.class_eval do
-        define_method set_name do
-          unless instance_variable_defined?("@#{set_name}")
-            set = instance_variable_set("@#{set_name}", Set.new)
-            yield(set) if block_given?
-            if set.sorted
-              set.id = "z#{identifier}:#{set_name}"
-            else
-              set.id = "#{identifier}:#{set_name}"
+        unless instance_methods.include?(set_name)
+          define_method set_name do
+            unless instance_variable_defined?("@#{set_name}")
+              set = instance_variable_set("@#{set_name}", Set.new)
+              yield(set) if block_given?
+              if set.sorted
+                set.id = "z#{identifier}:#{set_name}"
+              else
+                set.id = "#{identifier}:#{set_name}"
+              end
             end
+            instance_variable_get("@#{set_name}")
           end
-          instance_variable_get("@#{set_name}")
         end
       end
 
@@ -222,9 +241,10 @@ module Asha
 
     def find(id)
       hash = db.hgetall("#{self.name.downcase}:#{id}")
+      hash = hash.inject({}){|memo,(k,v)| memo[k.to_sym] = v; memo}
+
       if !hash.empty?
        record = self.new(hash)
-       record.instance_variable_set(:@persisted, true)
        record.instance_variable_set(:@id, id)
        record
       end
@@ -268,7 +288,7 @@ module Asha
     # TODO: how to handle when model is not in db yet
     def add(model)
       raise "Invalid data" unless model.is_a? Asha::Model
-      raise "Object not persisted" unless model.persisted
+      p "Can not add object to set. Save object first." and return unless model.persisted
       result = if sorted
                  db.zadd("#{id}", Time.now.to_i, model.id)
                else

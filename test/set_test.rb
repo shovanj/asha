@@ -37,7 +37,7 @@ describe Asha::Set do
   end
 
   it "should respond to ':all?'" do
-    ateam = Asha::Set.new()
+    # ateam = Asha::Set.new()
     expect(Asha::Set.new()).must_respond_to :all?
   end
 
