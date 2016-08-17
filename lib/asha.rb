@@ -11,6 +11,10 @@ module Asha
     end
   end
 
+  # Establishes connection
+  #
+  # @param conn [Hash] the hash object needs :db, :host
+  # @return a redis database
   def self.establish_connection(conn)
     raise "Please specify database." unless conn[:db]
     @redis ||= Redis.new(
@@ -20,6 +24,7 @@ module Asha
     )
   end
 
+  # @return instance of redis database
   def self.database
     raise 'Please establish connection to redis.' unless @redis
     @redis
@@ -58,8 +63,13 @@ module Asha
 
   module InstanceMethods
 
+    # @return [Time] the time when object is created
     attr_reader :created_at
+
+    # @return [Time] the time when object is updated
     attr_reader :updated_at
+
+    # @return [Integer] value returned by redis incr command on a counter
     attr_reader :id
 
     # @return [Boolean] indicates whether object has been stored in database
@@ -75,17 +85,23 @@ module Asha
       end
     end
 
+    # @return [Boolean] indicates whether object has been stored in database
     def persisted
       !id.nil?
     end
+    #
+    # @return [String] name of the model class
     def set
       @set ||= klass_name
     end
 
+    # This is  a test
+    # @return [String] name of the sorted set based on set name with 'z' appended
     def sorted_set
       @sorted_set ||= "z#{set}"
     end
 
+    # @return [String] which is used a unique key to retrieve data from redis
     def identifier
       "#{klass_name}:#{id}"
     end
@@ -101,11 +117,13 @@ module Asha
       self.class.key
     end
 
+    # @return [Boolean] indicates whether key(identifier) exists in redis database
     def exists?
       return false if id.nil?
       db.exists(identifier)
     end
 
+    # @return [Boolean] opposite of #exists?
     def new?
       !exists?
     end
@@ -114,6 +132,8 @@ module Asha
       db.sismember(klass_name, set_member_id)
     end
 
+    # saves the instance in redis database
+    # @return [Object]
     def save
       new_record = new?
       if new_record && member_of_set?
@@ -146,6 +166,7 @@ module Asha
       if key_attribute && instance_variable_get("@#{key_attribute}")
         Base64.strict_encode64(instance_variable_get("@#{key_attribute}"))
       else
+        p ".......#{id}"
         id
       end
     end
