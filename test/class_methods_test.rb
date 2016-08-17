@@ -1,4 +1,4 @@
-require 'test_helper'
+require_relative 'test_helper'
 
 class Source < Asha::Model
 
@@ -37,23 +37,24 @@ describe Asha::ClassMethods do
     end
 
     it "should add key attribute to set named after the class" do
-      identifier = object.identifier
-      db = Minitest::Mock.new
-      db.expect(:sismember, true, [String, String])
-      db.expect(:sismember, false, [String, String])
-      db.expect(:exists, false, [identifier])
-      params.each do |key, value|
-        db.expect(:hset, nil, [identifier, key.to_s, value])
-      end
+      object.stub("next_available_id", 1) do
+        db = Minitest::Mock.new
+        db.expect(:sismember, false, [String, String])
+        db.expect(:sismember, false, [String, String])
+        db.expect(:exists, false, ['source:1'])
+        params.each do |key, value|
+          db.expect(:hset, nil, ['source:1', key.to_s, value])
+        end
 
-      db.expect(:hset, nil, [identifier, "id", object.id])
-      db.expect(:hset, nil, [identifier, "created_at", Time])
-      db.expect(:hset, nil, [identifier, "updated_at", Time])
-      db.expect(:zadd, nil, ["zsource", Fixnum, object.id])
-      db.expect(:sadd, nil, ["source", String])
+        db.expect(:hset, nil, ['source:1', "id", 1])
+        db.expect(:hset, nil, ['source:1', "created_at", Time])
+        db.expect(:hset, nil, ['source:1', "updated_at", Time])
+        db.expect(:zadd, nil, ["zsource", Fixnum, 1])
+        db.expect(:sadd, nil, ["source", String])
 
-      object.stub("db", db) do
-        object.save
+        object.stub("db", db) do
+          object.save
+        end
       end
     end
   end

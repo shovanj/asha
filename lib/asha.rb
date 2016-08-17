@@ -5,9 +5,9 @@ require 'base64'
 
 module Asha
 
-  class DuplicateRecordError < RuntimeError
+  class SetMemberError < RuntimeError
     def initialize(record, msg="Record with given data already exists.")
-      super("#{msg} #{record.inspect}")
+      super("#{record.inspect} => #{msg} ")
     end
   end
 
@@ -90,6 +90,17 @@ module Asha
       "#{klass_name}:#{id}"
     end
 
+    # returns [String] which is the key attribute
+    # eg: In following 'url' will be returned
+    #  class Source
+    #     attribute :name
+    #     attribute :url
+    #     key: url
+    #  end
+    def key_attribute
+      self.class.key
+    end
+
     def exists?
       return false if id.nil?
       db.exists(identifier)
@@ -99,17 +110,23 @@ module Asha
       !exists?
     end
 
+    def member_of_set?
+      db.sismember(klass_name, set_member_id)
+    end
+
     def save
       new_record = new?
-      if new_record && !db.sismember(klass_name, set_member_id)
+      if new_record && member_of_set?
+        raise Asha::SetMemberError.new(self, "Record with key '#{set_member_id}(#{instance_variable_get("@#{key_attribute}")})' value already exists in '#{klass_name}'")
+      elsif new_record
         persist_in_db(true)
-        add_to_sets
-      elsif new_record && db.sismember(klass_name, set_member_id)
-        raise Asha::DuplicateRecordError.new(self)
       elsif !new_record
         # TODO: I don't like the method name here
         persist_in_db
       end
+
+      add_to_sets if !member_of_set?
+
       self
     end
 
@@ -126,8 +143,8 @@ module Asha
     end
 
     def set_member_id
-      if self.class.key
-        Base64.strict_encode64(instance_variable_get("@#{self.class.key}"))
+      if key_attribute && instance_variable_get("@#{key_attribute}")
+        Base64.strict_encode64(instance_variable_get("@#{key_attribute}"))
       else
         id
       end
