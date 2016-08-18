@@ -77,26 +77,25 @@ module Asha
       if new_record && member_of_set?
         raise Asha::SetMemberError.new(self, "Record with key '#{set_member_id}(#{instance_variable_get("@#{key_attribute}")})' value already exists in '#{klass_name}'")
       elsif new_record
-        persist_in_db(true)
+        save_record(true)
       elsif !new_record
-        # TODO: I don't like the method name here
-        persist_in_db
+        save_record
       end
 
-      add_to_sets if !member_of_set?
+      add_to_sets unless member_of_set?
 
       self
     end
 
     def update(values)
-      raise "Please save the record first." unless persisted
+      raise 'Please save the record first.' unless persisted
       # TODO: sanitize values param
       values.each do |key, value|
         if self.class.attributes.include?(key)
           instance_variable_set("@#{key}", value)
         end
       end
-      persist_in_db
+      save_record
       self
     end
 
@@ -111,10 +110,10 @@ module Asha
     private
 
     def next_available_id
-      return db.incr "#{klass_name}:id_counter"
+      db.incr "#{klass_name}:id_counter"
     end
 
-    def persist_in_db(new_record=false)
+    def save_record(new_record=false)
       @id = next_available_id if new_record
 
       instance_variables.each do |v|
