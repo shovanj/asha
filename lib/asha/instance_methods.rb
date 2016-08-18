@@ -30,13 +30,13 @@ module Asha
     #
     # @return [String] name of the model class
     def set
-      @set ||= klass_name
+      klass_name
     end
 
     # This is  a test
     # @return [String] name of the sorted set based on set name with 'z' appended
     def sorted_set
-      @sorted_set ||= "z#{set}"
+      "z#{klass_name}"
     end
 
     # @return [String] which is used a unique key to retrieve data from redis
@@ -117,7 +117,6 @@ module Asha
       @id = next_available_id if new_record
 
       instance_variables.each do |v|
-        next if v == :@identifier
         next if v == :@id
         db.hset(
             identifier,
@@ -133,8 +132,8 @@ module Asha
     end
 
     def add_to_sets
-      db.zadd("z#{klass_name}", Time.now.to_i, @id)
-      db.sadd(klass_name, set_member_id)
+      db.zadd(sorted_set, Time.now.to_i, @id)
+      db.sadd(set, set_member_id)
     end
 
   end
