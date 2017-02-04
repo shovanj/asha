@@ -132,6 +132,25 @@ describe Asha::InstanceMethods do
 
   end
 
+  describe '#delete' do
+    it 'should respond to delete' do
+      expect(object).must_respond_to 'delete'
+    end
+
+    it 'should call delete key and remove from set' do
+      identifier = object.identifier
+      mocked_db = Minitest::Mock.new
+      mocked_db.expect('del', true, [identifier])
+      mocked_db.expect('srem', true, [object.set, object.set_member_id])
+      mocked_db.expect('zrem', true, [object.sorted_set, object.id])
+
+      object.stub('db', mocked_db) do
+        object.delete
+      end
+
+    end
+  end
+
   def teardown
     Asha.database.smembers("source").each do |v|
       Asha.database.srem("source", v) # TODO: find a better way

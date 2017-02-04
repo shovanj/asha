@@ -107,6 +107,13 @@ module Asha
       end
     end
 
+    def delete
+      if db.del(identifier)
+        db.srem(set, set_member_id)
+        db.zrem(sorted_set, id)
+      end
+    end
+
     private
 
     def next_available_id
